@@ -4,13 +4,13 @@ externalDocs:
   url: "https://dfmailbox.dev/"
 info:
   title: DFMailbox API
+  version: "0.4.0"
   description: DFMailbox is a decentralized way to send messages to other DiamondFire plots.
 
   license:
     # Note this only applies to the spec, not the gleam implementation
     name: Apache-2.0
     url: https://www.apache.org/licenses/LICENSE-2.0.html
-  version: "0.3.1"
 servers:
   - url: http://{host}:{port}/v0
     variables:
@@ -33,7 +33,7 @@ paths:
     get:
       summary: Get plot info
       description: Returns the general information of the plot. Doesn't return the trusted plots.
-      operationId: getSelfPlotInfo
+      operationId: getPlotInfo
       security:
         - ApiKey: []
         - Plot: []
@@ -99,7 +99,7 @@ paths:
     put:
       summary: Change plot instance
       description: Change the instance public key. If the key is null, all the mailbox contents and trusted plots will be deleted.
-      operationId: updatePlotInstance
+      operationId: updateInstance
       security:
         - ApiKey: []
         - Plot: []
@@ -176,9 +176,9 @@ paths:
           $ref: '#/components/responses/ExpectedRegistered'
   /plot/mailbox:
     get:
-      summary: Get items from mailbox
+      summary: Check mailbox for items
       description: Gets items with an id that is greated than msg_id
-      operationId: getSelfMailbox
+      operationId: checkMailbox
       security:
         - ApiKey: []
         - Plot: []
@@ -201,7 +201,7 @@ paths:
     post:
       summary: Send items to mailbox
       description: Append a list of items to the back of the mailbox
-      operationId: sendMail
+      operationId: sendMailToSelf
       security:
         - ApiKey: []
         - Plot: []
@@ -218,9 +218,9 @@ paths:
           $ref: '#/components/responses/ExpectedHostAuth'
 
     delete:
-      summary: Get and delete items
+      summary: Check and cleanup mailbox
       description: Gets items with an id that is greated than msg_id and deletes items that are less than or equal to msg_id. This prevents the mailbox from being filled with useless data.
-      operationId: getCleanupMailbox
+      operationId: checkCleanMailbox
       security:
         - ApiKey: []
         - Plot: []
@@ -418,7 +418,7 @@ paths:
     post:
       summary: Trust plots
       description: Add plots to trust list
-      operationId: addTrusted
+      operationId: trustPlots
       security:
         - ApiKey: []
         - Plot: []
@@ -459,7 +459,7 @@ paths:
     delete:
       summary: Un-trust plots
       description: Remove trust from plots
-      operationId: removeTrusted
+      operationId: untrustPlot
       security:
         - ApiKey: []
         - Plot: []
@@ -493,7 +493,7 @@ paths:
     get:
       summary: Get another plot's info
       description: Returns the general information of the plot. Doesn't return the trusted plots.
-      operationId: getPlotInfo
+      operationId: lookupPlot
       security:
         - ApiKey: []
         - Plot: []
@@ -514,7 +514,7 @@ paths:
     post:
       summary: Send an item into another mailbox
       description: Sends an item to another mailbox. This mailbox can be from another instance.
-      operationId: sendMailToPlot
+      operationId: sendMail
       security:
         - ApiKey: []
         - Plot: []
@@ -535,7 +535,7 @@ paths:
     get:
       summary: Get instance address by key
       description: This is to check what the instance thinks the address is
-      operationId: getInstanceAddress
+      operationId: lookupInstanceAddress
       tags:
         - instance
       parameters:
