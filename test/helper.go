@@ -70,8 +70,12 @@ func Setup(file_path string, env map[string]string) (*compose.DockerCompose, str
 func Teardown(stack *compose.DockerCompose) {
 	err := stack.Down(
 		context.Background(),
+		compose.RemoveOrphans(true),
+		compose.RemoveVolumes(true),
+		compose.RemoveImagesLocal,
 	)
 	if err != nil {
 		log.Printf("Failed to start stack: %v", err)
+
 	}
 }
