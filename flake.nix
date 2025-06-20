@@ -17,6 +17,7 @@
         nativeBuildInputs = with pkgs; [
             go
             gopls
+            openapi-generator-cli
         ];
       };
     });
