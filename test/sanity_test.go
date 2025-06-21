@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"testing"
@@ -11,13 +12,14 @@ import (
 func TestStack(t *testing.T) {
 	t.Parallel()
 	env := ReadEnv()
-	stack, address, err := SetupDefault(env.composePath)
+	stack, natPort, err := SetupDefault(env.composePath)
+	port := natPort.Port()
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	log.Printf("Address: %v", address)
-	res, err := http.Get(address)
+	log.Printf("Address: localhost:%s", port)
+	res, err := http.Get(fmt.Sprintf("http://localhost:%s", port))
 	if err != err {
 		t.Errorf("Error sending req %v", err)
 	}
