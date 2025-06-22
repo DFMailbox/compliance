@@ -2,10 +2,13 @@ package main
 
 import (
 	"context"
+	"crypto/ed25519"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 
 	openapi "github.com/DFMailbox/go-client"
 	"github.com/docker/go-connections/nat"
@@ -14,12 +17,42 @@ import (
 )
 
 // Pretty please don't mutate this
-var Keys = []string{
+var keys []string = []string{
 	"TESTING0KEYTESTING0KEYTESTING0KEYTESTING000=",
 	"TESTING0KEYTESTING0KEYTESTING0KEYTESTING001=",
 	"TESTING0KEYTESTING0KEYTESTING0KEYTESTING002=",
 	"TESTING0KEYTESTING0KEYTESTING0KEYTESTING003=",
 	"TESTING0KEYTESTING0KEYTESTING0KEYTESTING004=",
+	"TESTING0KEYTESTING0KEYTESTING0KEYTESTING005=",
+	"TESTING0KEYTESTING0KEYTESTING0KEYTESTING006=",
+}
+
+var extKeys []ed25519.PrivateKey
+var uuidRegex = regexp.MustCompile(`^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[1-5][a-fA-F0-9]{3}-[89abAB][a-fA-F0-9]{3}-[a-fA-F0-9]{12}$`)
+
+func init() {
+	sKeys := []string{
+		"TESTING0KEYTESTING0KEYTESTING0KEYTESTING000=",
+		"TESTING0KEYTESTING0KEYTESTING0KEYTESTING001=",
+		"TESTING0KEYTESTING0KEYTESTING0KEYTESTING002=",
+		"TESTING0KEYTESTING0KEYTESTING0KEYTESTING003=",
+		"TESTING0KEYTESTING0KEYTESTING0KEYTESTING004=",
+		"TESTING0KEYTESTING0KEYTESTING0KEYTESTING005=",
+		"TESTING0KEYTESTING0KEYTESTING0KEYTESTING006=",
+	}
+	keyList := make([]ed25519.PrivateKey, len(sKeys))
+
+	for i, str := range sKeys {
+		key, err := base64.StdEncoding.DecodeString(str)
+		if err != nil {
+			panic("key is invalid base64")
+		}
+		if len(key) != ed25519.SeedSize {
+			panic(fmt.Sprintf("key is invalid length %d", len(key)))
+		}
+		keyList[i] = ed25519.NewKeyFromSeed(key)
+	}
+	extKeys = keyList
 }
 
 func ReadEnv() Environment {
@@ -38,8 +71,9 @@ type Environment struct {
 
 func SetupDefault(file_path string) (*compose.DockerCompose, *nat.Port, error) {
 	return Setup(file_path, map[string]string{
-		"DFMC_ADDRESS":     "dfm.example.com",
-		"DFMC_PRIVATE_KEY": Keys[0],
+		"DFMC_ADDRESS":      "dfm.example.com",
+		"DFMC_PRIVATE_KEY":  keys[0],
+		"DFMC_HOST_GATEWAY": os.Getenv("DFMC_HOST_GATEWAY"),
 	})
 }
 

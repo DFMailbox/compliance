@@ -38,7 +38,7 @@ func PlotTest(t *testing.T, username string, uuid string, plotId int32) {
 	assert.NoError(t, err)
 	assert.Equal(t, resp.StatusCode, 201)
 
-	plot, _, err := client.PlotAPI.GetPlotInfo(ctx).Execute()
+	plot, resp, err := client.PlotAPI.GetPlotInfo(ctx).Execute()
 	assert.NoError(t, err)
 	cmpPlot := openapi.Plot{
 		PlotId:       plotId,
@@ -47,7 +47,7 @@ func PlotTest(t *testing.T, username string, uuid string, plotId int32) {
 		Address:      *openapi.NewNullableString(nil),
 		MailboxMsgId: 0,
 	}
-	// assert.Equal(t, *plot, cmdPlot);
+	assert.Equal(t, resp.StatusCode, 200)
 	if !reflect.DeepEqual(*plot, cmpPlot) {
 		t.Errorf("Got %+v expected %+v", plot, cmpPlot)
 		return
