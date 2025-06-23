@@ -1,6 +1,7 @@
-package main
+package tests
 
 import (
+	"context"
 	"crypto/ed25519"
 	"encoding/base64"
 	"encoding/json"
@@ -10,60 +11,85 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"sync/atomic"
-	"testing"
 
 	openapi "github.com/DFMailbox/go-client"
 	"github.com/google/uuid"
-	"github.com/stretchr/testify/assert"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	"github.com/testcontainers/testcontainers-go/modules/compose"
 )
 
-func TestBasicIdentify(t *testing.T) {
-	// setup
-	t.Parallel()
-	env := ReadEnv()
-	stack, port, err := SetupDefault(env.composePath)
-	assert.NoError(t, err)
-	defer Teardown(stack)
+var _ = Describe("Identify", Label("federation"), func() {
+	var client *openapi.APIClient
+	var ctx context.Context
+	var stack *compose.DockerCompose
+	BeforeEach(func() {
+		// setup
+		env := ReadEnv()
+		s, port, err := SetupDefault(env.composePath)
+		stack = s
+		Expect(err).ShouldNot(HaveOccurred())
 
-	ctx := SetupContex(port)
-	log.Printf("Container address: http://localhost:%d/", port.Int())
+		ctx = SetupContex(port)
+		log.Printf("Container address: http://localhost:%d/", port.Int())
 
-	config := openapi.NewConfiguration()
-	client := openapi.NewAPIClient(config)
+		config := openapi.NewConfiguration()
+		client = openapi.NewAPIClient(config)
+	})
+	AfterEach(func() {
+		Teardown(stack)
+	})
+	When("The host instance is compliant", Ordered, func() {
+		It("should identify instance with key 0", func() {
+			pubkey, mockAddr, hits, testServer := setupMockServer(extKeys[0])
+			defer testServer.Close()
+			resp, err := client.InstanceAPI.IntroduceInstance(ctx).IntroduceInstanceRequest(
+				*openapi.NewIntroduceInstanceRequest(pubkey, mockAddr),
+			).Execute()
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(resp.StatusCode).Should(Equal(200))
+			log.Printf("%s %+v", resp.Body, mockAddr)
+			Expect(resp.StatusCode, 200)
+			Expect(hits.Load()).Should(Equal(int32(1)))
+		})
+		It("should identify instance with key 1", func() {
+			pubkey, mockAddr, hits, testServer := setupMockServer(extKeys[1])
+			defer testServer.Close()
+			resp, err := client.InstanceAPI.IntroduceInstance(ctx).IntroduceInstanceRequest(
+				*openapi.NewIntroduceInstanceRequest(pubkey, mockAddr),
+			).Execute()
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(resp.StatusCode).Should(Equal(200))
+			log.Printf("%s %+v", resp.Body, mockAddr)
+			Expect(resp.StatusCode, 200)
+			Expect(hits.Load()).Should(Equal(int32(1)))
+		})
+	})
+})
 
-	// build listener
-	pubkey := extKeys[0].Public().(ed25519.PublicKey)
+func setupMockServer(key ed25519.PrivateKey) (string, string, *atomic.Int32, *httptest.Server) {
+	pubkey := key.Public().(ed25519.PublicKey)
 	encodedPubkey := base64.RawURLEncoding.EncodeToString(pubkey)
 	var hits atomic.Int32
 	addrChan := make(chan string, 1)
-	listener, err := net.Listen("tcp", "0.0.0.0:36479")
-	assert.NoError(t, err)
+	listener, err := net.Listen("tcp", "0.0.0.0:0")
+	Expect(err).ShouldNot(HaveOccurred())
 	ts := &httptest.Server{
 		Listener: listener,
-		Config:   &http.Server{Handler: http.HandlerFunc(handleIdentifyInstanceOwnership(t, addrChan, encodedPubkey, &hits))},
+		Config:   &http.Server{Handler: http.HandlerFunc(compliantHandleIdentifyInstanceOwnership(addrChan, encodedPubkey, &hits))},
 	}
 	ts.Start()
 	unprocessedAddr := listener.Addr()
 	tcpAddr, ok := unprocessedAddr.(*net.TCPAddr)
-	assert.True(t, ok)
-	defer ts.Close()
+	Expect(ok).Should(BeTrue())
 	mockAddr := fmt.Sprintf("host.docker.internal:%d", tcpAddr.Port)
 	addrChan <- mockAddr
 
 	log.Printf("Mock address: http://%s", mockAddr)
-
-	// actual test
-	resp, err := client.InstanceAPI.IntroduceInstance(ctx).IntroduceInstanceRequest(
-		*openapi.NewIntroduceInstanceRequest(encodedPubkey, mockAddr),
-	).Execute()
-	assert.NoError(t, err)
-
-	assert.Equal(t, 200, resp.StatusCode)
-	log.Printf("%s %+v", resp.Body, mockAddr)
-	assert.Equal(t, int32(1), hits.Load())
+	return encodedPubkey, mockAddr, &hits, ts
 }
 
-func handleIdentifyInstanceOwnership(t *testing.T, addrChan chan string, pubkey string, hits *atomic.Int32) func(w http.ResponseWriter, r *http.Request) {
+func compliantHandleIdentifyInstanceOwnership(addrChan chan string, pubkey string, hits *atomic.Int32) func(w http.ResponseWriter, r *http.Request) {
 	// Yes, this is just a dfmailbox complianct /v0/federation/instance
 	return func(w http.ResponseWriter, r *http.Request) {
 		// This is probably not how you are supposed to do this
@@ -71,13 +97,13 @@ func handleIdentifyInstanceOwnership(t *testing.T, addrChan chan string, pubkey 
 		addr := <-addrChan
 		addrChan <- addr
 
-		assert.Equal(t, r.URL.Path, "/v0/federation/instance")
-		assert.Equal(t, r.Method, "GET")
+		Expect(r.URL.Path).Should(Equal("/v0/federation/instance"))
+		Expect(r.Method, "GET")
 		query := r.URL.Query()
 		challengeStrUuid := query.Get("challenge")
 		challengeUuid, err := uuid.Parse(challengeStrUuid)
-		assert.True(t, uuidRegex.Match([]byte(challengeStrUuid)))
-		assert.NoError(t, err)
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(uuidRegex.Match([]byte(challengeStrUuid))).Should(BeTrue())
 		challengeBytes := challengeUuid[:]
 		challenge := append([]byte(addr), challengeBytes...)
 		sig := ed25519.Sign(extKeys[0], challenge)
@@ -90,7 +116,7 @@ func handleIdentifyInstanceOwnership(t *testing.T, addrChan chan string, pubkey 
 		)
 		w.Header().Set("Content-Type", "application/json")
 		_, err = w.Write(encoded)
-		assert.NoError(t, err)
+		Expect(err).ShouldNot(HaveOccurred())
 		hits.Add(1)
 	}
 }

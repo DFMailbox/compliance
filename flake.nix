@@ -18,6 +18,7 @@
             go
             gopls
             openapi-generator-cli
+            ginkgo
         ];
       };
     });
