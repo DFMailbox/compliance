@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"sync/atomic"
+	// "time"
 
 	openapi "github.com/DFMailbox/go-client"
 	"github.com/google/uuid"
@@ -19,11 +20,11 @@ import (
 	"github.com/testcontainers/testcontainers-go/modules/compose"
 )
 
-var _ = Describe("Identify", Label("federation"), func() {
+var _ = Describe("Identify and test category: instance", Ordered, Label("federation"), func() {
 	var client *openapi.APIClient
 	var ctx context.Context
 	var stack *compose.DockerCompose
-	BeforeEach(func() {
+	BeforeAll(func() {
 		// setup
 		env := ReadEnv()
 		s, port, err := SetupDefault(env.composePath)
@@ -36,34 +37,63 @@ var _ = Describe("Identify", Label("federation"), func() {
 		config := openapi.NewConfiguration()
 		client = openapi.NewAPIClient(config)
 	})
-	AfterEach(func() {
+	AfterAll(func() {
 		Teardown(stack)
 	})
-	When("The host instance is compliant", Ordered, func() {
-		It("should identify instance with key 0", func() {
-			pubkey, mockAddr, hits, testServer := setupMockServer(extKeys[0])
+	When("The instance is compliant", Ordered, func() {
+		var mockAddr string
+		It("should identify instance", func() {
+			pubkey, lMockAddr, hits, testServer := setupMockServer(extKeys[1])
+			mockAddr = lMockAddr
 			defer testServer.Close()
 			resp, err := client.InstanceAPI.IntroduceInstance(ctx).IntroduceInstanceRequest(
-				*openapi.NewIntroduceInstanceRequest(pubkey, mockAddr),
+				*openapi.NewIntroduceInstanceRequest(pubkey, lMockAddr),
 			).Execute()
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(resp.StatusCode).Should(Equal(200))
-			log.Printf("%s %+v", resp.Body, mockAddr)
 			Expect(resp.StatusCode, 200)
 			Expect(hits.Load()).Should(Equal(int32(1)))
 		})
-		It("should identify instance with key 1", func() {
-			pubkey, mockAddr, hits, testServer := setupMockServer(extKeys[1])
-			defer testServer.Close()
-			resp, err := client.InstanceAPI.IntroduceInstance(ctx).IntroduceInstanceRequest(
-				*openapi.NewIntroduceInstanceRequest(pubkey, mockAddr),
-			).Execute()
+		It("should respond with instance", func() {
+			oai, _, err := client.InstanceAPI.LookupInstanceAddress(ctx).
+				Execute()
+			Expect(err).ShouldNot(HaveOccurred())
+			log.Printf("More: %+v", oai.LookupInstanceAddress200ResponseOneOf1.Instances)
+			oai, resp, err := client.InstanceAPI.LookupInstanceAddress(ctx).
+				PublicKey(base64.RawURLEncoding.EncodeToString(extKeys[1].Public().(ed25519.PublicKey))).
+				Execute()
+			log.Printf("%+v", oai)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(resp.StatusCode).Should(Equal(200))
-			log.Printf("%s %+v", resp.Body, mockAddr)
-			Expect(resp.StatusCode, 200)
-			Expect(hits.Load()).Should(Equal(int32(1)))
+			Expect(*oai.LookupInstanceAddress200ResponseOneOf.Instance.Address.Get()).Should(Equal(mockAddr))
 		})
+		It("should fail on a nonexistent instance", func() {
+			oai, resp, err := client.InstanceAPI.LookupInstanceAddress(ctx).PublicKey(
+				base64.RawURLEncoding.EncodeToString(extKeys[2].Public().(ed25519.PublicKey)),
+			).Execute()
+			Expect(oai).Should(BeNil())
+			Expect(resp.StatusCode).Should(Equal(404))
+			Expect(err).Should(HaveOccurred())
+			var data map[string]any
+			json.Unmarshal(err.(*openapi.GenericOpenAPIError).Body(), &data)
+			log.Printf("%+v", data)
+			Expect(data).To(HaveKeyWithValue("type", "/v0/problems/unknown-instance"))
+			Expect(data).To(HaveKeyWithValue("public_key", "Gp6a-nGu8TCRsMWSRuIzlt-_KYOJsBJgaQ2DRIIkvF4="))
+			Expect(data).To(HaveKeyWithValue("status", 404.0))
+			Expect(data).To(HaveKeyWithValue("title", "Specified instance has not been identified"))
+		})
+	})
+	It("should identify instance with key 2", func() {
+		pubkey, mockAddr, hits, testServer := setupMockServer(extKeys[2])
+		defer testServer.Close()
+		resp, err := client.InstanceAPI.IntroduceInstance(ctx).IntroduceInstanceRequest(
+			*openapi.NewIntroduceInstanceRequest(pubkey, mockAddr),
+		).Execute()
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(resp.StatusCode).Should(Equal(200))
+		log.Printf("%s %+v", resp.Body, mockAddr)
+		Expect(resp.StatusCode, 200)
+		Expect(hits.Load()).Should(Equal(int32(1)))
 	})
 })
 
@@ -76,7 +106,7 @@ func setupMockServer(key ed25519.PrivateKey) (string, string, *atomic.Int32, *ht
 	Expect(err).ShouldNot(HaveOccurred())
 	ts := &httptest.Server{
 		Listener: listener,
-		Config:   &http.Server{Handler: http.HandlerFunc(compliantHandleIdentifyInstanceOwnership(addrChan, encodedPubkey, &hits))},
+		Config:   &http.Server{Handler: http.HandlerFunc(compliantHandleIdentifyInstanceOwnership(key, addrChan, encodedPubkey, &hits))},
 	}
 	ts.Start()
 	unprocessedAddr := listener.Addr()
@@ -89,7 +119,7 @@ func setupMockServer(key ed25519.PrivateKey) (string, string, *atomic.Int32, *ht
 	return encodedPubkey, mockAddr, &hits, ts
 }
 
-func compliantHandleIdentifyInstanceOwnership(addrChan chan string, pubkey string, hits *atomic.Int32) func(w http.ResponseWriter, r *http.Request) {
+func compliantHandleIdentifyInstanceOwnership(key ed25519.PrivateKey, addrChan chan string, pubkey string, hits *atomic.Int32) func(w http.ResponseWriter, r *http.Request) {
 	// Yes, this is just a dfmailbox complianct /v0/federation/instance
 	return func(w http.ResponseWriter, r *http.Request) {
 		// This is probably not how you are supposed to do this
@@ -106,7 +136,7 @@ func compliantHandleIdentifyInstanceOwnership(addrChan chan string, pubkey strin
 		Expect(uuidRegex.Match([]byte(challengeStrUuid))).Should(BeTrue())
 		challengeBytes := challengeUuid[:]
 		challenge := append([]byte(addr), challengeBytes...)
-		sig := ed25519.Sign(extKeys[0], challenge)
+		sig := ed25519.Sign(key, challenge)
 		encoded, err := json.Marshal(
 			openapi.VerifyIdentity200Response{
 				PublicKey: pubkey,

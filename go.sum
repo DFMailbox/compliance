@@ -11,6 +11,16 @@ github.com/Azure/go-ansiterm v0.0.0-20250102033503-faa5f7b0171c/go.mod h1:xomTg6
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/DFMailbox/go-client v0.0.0-20250620181556-361a21b2201d h1:w56QqjEjm7WpDRUfJMf/8TvB+db9AFb2y/9zsmRveZk=
 github.com/DFMailbox/go-client v0.0.0-20250620181556-361a21b2201d/go.mod h1:O8of0xQnmYqDocLkF2sCsVUmqLvSmSkebum2GJtAxWw=
+github.com/DFMailbox/go-client v0.0.0-20250626031101-89e1d50f0a0a h1:8JAdQ2VDdqWSPY94NsNox10Lqu3wbLGpi7ODUyV1Pnk=
+github.com/DFMailbox/go-client v0.0.0-20250626031101-89e1d50f0a0a/go.mod h1:O8of0xQnmYqDocLkF2sCsVUmqLvSmSkebum2GJtAxWw=
+github.com/DFMailbox/go-client v0.0.0-20250627183841-4be0b148ef74 h1:xPKfRIrJjCFNP4HKMXw0bcHLRuFLp1M+yng4NBQ6Cvs=
+github.com/DFMailbox/go-client v0.0.0-20250627183841-4be0b148ef74/go.mod h1:O8of0xQnmYqDocLkF2sCsVUmqLvSmSkebum2GJtAxWw=
+github.com/DFMailbox/go-client v0.0.0-20250627185858-49330d4b9c7d h1:lcaf35eyWh0wmocOZSMePuVhV6DYJZG//cyXJfU7bnQ=
+github.com/DFMailbox/go-client v0.0.0-20250627185858-49330d4b9c7d/go.mod h1:O8of0xQnmYqDocLkF2sCsVUmqLvSmSkebum2GJtAxWw=
+github.com/DFMailbox/go-client v0.0.0-20250627193104-47e27dfe3c72 h1:ejNAlkTiW4Xp//EzHe4yPb6bBx/Cpz2tXSUJgWMzpZA=
+github.com/DFMailbox/go-client v0.0.0-20250627193104-47e27dfe3c72/go.mod h1:O8of0xQnmYqDocLkF2sCsVUmqLvSmSkebum2GJtAxWw=
+github.com/DFMailbox/go-client v0.0.0-20250627201240-ac0872755ec9 h1:pVFbsDe+1dmN9V6WGepzF8QLW4f92OQTIIxebityqas=
+github.com/DFMailbox/go-client v0.0.0-20250627201240-ac0872755ec9/go.mod h1:O8of0xQnmYqDocLkF2sCsVUmqLvSmSkebum2GJtAxWw=
 github.com/DefangLabs/secret-detector v0.0.0-20250403165618-22662109213e h1:rd4bOvKmDIx0WeTv9Qz+hghsgyjikFiPrseXHlKepO0=
 github.com/DefangLabs/secret-detector v0.0.0-20250403165618-22662109213e/go.mod h1:blbwPQh4DTlCZEfk1BLU4oMIhLda2U+A840Uag9DsZw=
 github.com/Masterminds/semver/v3 v3.2.1 h1:RN9w6+7QoMeJVGyfmbcgs28Br8cvmnucEXnY0rYXWg0=
