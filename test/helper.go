@@ -4,14 +4,21 @@ import (
 	"context"
 	"crypto/ed25519"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
+	"net"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"regexp"
+	"sync/atomic"
 
 	openapi "github.com/DFMailbox/go-client"
 	"github.com/docker/go-connections/nat"
+	"github.com/google/uuid"
+	. "github.com/onsi/gomega"
 	"github.com/testcontainers/testcontainers-go/modules/compose"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
@@ -128,4 +135,58 @@ func SetupContex(port *nat.Port) context.Context {
 		"port": port.Port(),
 	})
 	return context.WithValue(ctx, openapi.ContextServerIndex, 0)
+}
+
+func SetupMockServer(key ed25519.PrivateKey) (string, string, *atomic.Int32, *httptest.Server) {
+	pubkey := key.Public().(ed25519.PublicKey)
+	encodedPubkey := base64.RawURLEncoding.EncodeToString(pubkey)
+	var hits atomic.Int32
+	addrChan := make(chan string, 1)
+	listener, err := net.Listen("tcp", "0.0.0.0:0")
+	Expect(err).ShouldNot(HaveOccurred())
+	ts := &httptest.Server{
+		Listener: listener,
+		Config:   &http.Server{Handler: http.HandlerFunc(compliantHandleIdentifyInstanceOwnership(key, addrChan, encodedPubkey, &hits))},
+	}
+	ts.Start()
+	unprocessedAddr := listener.Addr()
+	tcpAddr, ok := unprocessedAddr.(*net.TCPAddr)
+	Expect(ok).Should(BeTrue())
+	mockAddr := fmt.Sprintf("host.docker.internal:%d", tcpAddr.Port)
+	addrChan <- mockAddr
+
+	log.Printf("Mock address: http://%s", mockAddr)
+	return encodedPubkey, mockAddr, &hits, ts
+}
+
+func compliantHandleIdentifyInstanceOwnership(key ed25519.PrivateKey, addrChan chan string, pubkey string, hits *atomic.Int32) func(w http.ResponseWriter, r *http.Request) {
+	// Yes, this is just a dfmailbox complianct /v0/federation/instance
+	return func(w http.ResponseWriter, r *http.Request) {
+		// This is probably not how you are supposed to do this
+		// But I shoulnd't dwell on this too long and I should come back when I am better at go
+		addr := <-addrChan
+		addrChan <- addr
+
+		Expect(r.URL.Path).Should(Equal("/v0/federation/instance"))
+		Expect(r.Method, "GET")
+		query := r.URL.Query()
+		challengeStrUuid := query.Get("challenge")
+		challengeUuid, err := uuid.Parse(challengeStrUuid)
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(uuidRegex.Match([]byte(challengeStrUuid))).Should(BeTrue())
+		challengeBytes := challengeUuid[:]
+		challenge := append([]byte(addr), challengeBytes...)
+		sig := ed25519.Sign(key, challenge)
+		encoded, err := json.Marshal(
+			openapi.VerifyIdentity200Response{
+				PublicKey: pubkey,
+				Signature: base64.RawStdEncoding.EncodeToString(sig),
+				Address:   addr,
+			},
+		)
+		w.Header().Set("Content-Type", "application/json")
+		_, err = w.Write(encoded)
+		Expect(err).ShouldNot(HaveOccurred())
+		hits.Add(1)
+	}
 }
