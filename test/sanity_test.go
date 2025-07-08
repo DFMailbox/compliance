@@ -12,8 +12,7 @@ import (
 
 var _ = Describe("Running test stack", func() {
 	It("returns the service name", func() {
-		env := ReadEnv()
-		stack, natPort, err := SetupDefault(env.composePath)
+		stack, natPort, err := SetupDefault()
 		Expect(err).Should(BeNil())
 		port := natPort.Port()
 		log.Printf("Address: localhost:%s", port)

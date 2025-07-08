@@ -23,8 +23,7 @@ var _ = Describe("Identify and test category: instance", Ordered, Label("federat
 	var stack *compose.DockerCompose
 	BeforeAll(func() {
 		// setup
-		env := ReadEnv()
-		s, port, err := SetupDefault(env.composePath)
+		s, port, err := SetupDefault()
 		stack = s
 		Expect(err).ShouldNot(HaveOccurred())
 

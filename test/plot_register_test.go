@@ -19,8 +19,7 @@ var _ = Describe("Registering plots", Ordered, func() {
 	var client *openapi.APIClient
 	var stack *compose.DockerCompose
 	BeforeAll(func() {
-		env := ReadEnv()
-		s, port, err := SetupDefault(env.composePath)
+		s, port, err := SetupDefault()
 		stack = s
 		Expect(err).ShouldNot(HaveOccurred())
 

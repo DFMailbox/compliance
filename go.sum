@@ -21,6 +21,8 @@ github.com/DFMailbox/go-client v0.0.0-20250627193104-47e27dfe3c72 h1:ejNAlkTiW4X
 github.com/DFMailbox/go-client v0.0.0-20250627193104-47e27dfe3c72/go.mod h1:O8of0xQnmYqDocLkF2sCsVUmqLvSmSkebum2GJtAxWw=
 github.com/DFMailbox/go-client v0.0.0-20250627201240-ac0872755ec9 h1:pVFbsDe+1dmN9V6WGepzF8QLW4f92OQTIIxebityqas=
 github.com/DFMailbox/go-client v0.0.0-20250627201240-ac0872755ec9/go.mod h1:O8of0xQnmYqDocLkF2sCsVUmqLvSmSkebum2GJtAxWw=
+github.com/DFMailbox/go-client v0.0.0-20250701043021-d717800ace39 h1:1xPbUi4xR2sar6T10qLHdL6CwG7/VkxG4Lhal+JTHnE=
+github.com/DFMailbox/go-client v0.0.0-20250701043021-d717800ace39/go.mod h1:O8of0xQnmYqDocLkF2sCsVUmqLvSmSkebum2GJtAxWw=
 github.com/DefangLabs/secret-detector v0.0.0-20250403165618-22662109213e h1:rd4bOvKmDIx0WeTv9Qz+hghsgyjikFiPrseXHlKepO0=
 github.com/DefangLabs/secret-detector v0.0.0-20250403165618-22662109213e/go.mod h1:blbwPQh4DTlCZEfk1BLU4oMIhLda2U+A840Uag9DsZw=
 github.com/Masterminds/semver/v3 v3.2.1 h1:RN9w6+7QoMeJVGyfmbcgs28Br8cvmnucEXnY0rYXWg0=

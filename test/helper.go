@@ -68,19 +68,22 @@ func ReadEnv() Environment {
 		path = "../../compliance-docker-compose.yml"
 	}
 	return Environment{
-		composePath: path,
+		HostGateway: os.Getenv("DFMC_HOST_GATEWAY"),
+		ComposePath: path,
 	}
 }
 
 type Environment struct {
-	composePath string
+	ComposePath string
+	HostGateway string
 }
 
-func SetupDefault(file_path string) (*compose.DockerCompose, *nat.Port, error) {
-	return Setup(file_path, map[string]string{
+func SetupDefault() (*compose.DockerCompose, *nat.Port, error) {
+	env := ReadEnv()
+	return Setup(env.ComposePath, map[string]string{
 		"DFMC_ADDRESS":      "dfm.example.com",
 		"DFMC_PRIVATE_KEY":  keys[0],
-		"DFMC_HOST_GATEWAY": os.Getenv("DFMC_HOST_GATEWAY"),
+		"DFMC_HOST_GATEWAY": env.HostGateway,
 	})
 }
 
