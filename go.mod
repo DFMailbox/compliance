@@ -1,4 +1,4 @@
-module github.com/testcontainers/testcontainers-go-demo
+module github.com/DFMailbox/compliance
 
 go 1.24.3
 
